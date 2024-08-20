@@ -75,7 +75,8 @@
       todos.forEach(async (todo) => {
         const todoItem = document.createElement('div');
         todoItem.classList.add('todo-item');
-        todoItem.innerHTML = `<strong>${todo.title}</strong>: ${todo.description}`;
+        todoItem.innerHTML = `<strong>${todo.title}</strong>: ${todo.description} <em>[Status: ${todo.status}]</em>`;
+
 
         const updateButton = document.createElement('button');
         updateButton.innerText = 'Update';
