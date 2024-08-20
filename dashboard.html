@@ -105,7 +105,15 @@
           subtodos.forEach(subtodo => {
             const subtodoItem = document.createElement('div');
             subtodoItem.classList.add('subtodo-item');
-            subtodoItem.innerText = `${subtodo.title}: ${subtodo.description}`;
+            // Display subtodo title, description, and status
+            subtodoItem.innerHTML = `${subtodo.title}: ${subtodo.description} <em>[Status: ${subtodo.status}]</em>`;
+            
+            // Add delete button (X)
+            const deleteSubtodoButton = document.createElement('button');
+            deleteSubtodoButton.innerText = 'X';
+            deleteSubtodoButton.onclick = () => deleteSubtodo(todo.id, subtodo.id);
+            subtodoItem.appendChild(deleteSubtodoButton);
+
             subtodoContainer.appendChild(subtodoItem);
           });
         }

@@ -180,6 +180,37 @@ function addSubtodo(email, todoId, subtodoData) {
   fs.appendFileSync(subtodoFile, buffer);
 }
 
+function deleteSubtodo(email, todoId, subtodoId) {
+  const userDir = path.join(__dirname, 'todo', email.replace(/@/g, '_').replace(/\./g, '_'));
+  const subtodoDir = path.join(userDir, todoId);
+  const subtodoFile = path.join(subtodoDir, 'subtodos.bin');
+
+  if (!fs.existsSync(subtodoFile)) {
+    return false;
+  }
+
+  const fd = fs.openSync(subtodoFile, 'r+');
+  const buffer = Buffer.alloc(RECORD_SIZE);
+  let bytesRead = 0;
+  let position = 0;
+
+  while ((bytesRead = fs.readSync(fd, buffer, 0, RECORD_SIZE, position)) > 0) {
+    const subtodo = deserializeTodo(buffer.toString('utf8', 0, bytesRead));
+    if (subtodo.id === subtodoId) {
+      const deletedSubtodo = { ...subtodo, id: `DEL_${subtodo.id}` };
+      const deletedRecord = Buffer.from(serializeTodo(deletedSubtodo), 'utf8');
+      fs.writeSync(fd, deletedRecord, 0, RECORD_SIZE, position);
+      fs.closeSync(fd);
+      return true;
+    }
+    position += RECORD_SIZE;
+  }
+
+  fs.closeSync(fd);
+  return false;
+}
+
+
 function readSubtodos(email, todoId) {
   const userDir = path.join(__dirname, 'todo', email.replace(/@/g, '_').replace(/\./g, '_'));
   const subtodoDir = path.join(userDir, todoId);
@@ -197,13 +228,16 @@ function readSubtodos(email, todoId) {
 
   while ((bytesRead = fs.readSync(fd, buffer, 0, RECORD_SIZE, position)) > 0) {
     const subtodo = deserializeTodo(buffer.toString('utf8', 0, bytesRead));
-    subtodos.push(subtodo);
+    if (!subtodo.id.startsWith('DEL_')) {  // Skip deleted subtodos
+      subtodos.push(subtodo);
+    }
     position += RECORD_SIZE;
   }
   fs.closeSync(fd);
 
   return subtodos;
 }
+
 
 // Server Setup
 const server = http.createServer((req, res) => {
@@ -352,6 +386,17 @@ const server = http.createServer((req, res) => {
 
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify(subtodos));
+  }
+  else if (req.method === 'POST' && pathname === '/deleteSubtodo') {
+    let body = '';
+    req.on('data', chunk => { body += chunk.toString(); });
+    req.on('end', () => {
+      const { email, todoId, subtodoId } = JSON.parse(body);
+  
+      const success = deleteSubtodo(email, todoId, subtodoId);
+      res.writeHead(success ? 200 : 404, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success }));
+    });
   }
 
   // Route not found
