@@ -9,8 +9,16 @@
     .todo-item {
       margin-bottom: 10px;
     }
+    .subtodo-item {
+      margin-left: 20px;
+      margin-bottom: 5px;
+      font-size: 0.9em;
+    }
     .todo-item button {
       margin-left: 10px;
+    }
+    .subtodo-container {
+      margin-left: 20px;
     }
   </style>
 </head>
@@ -28,15 +36,16 @@
   <div id="todoList"></div>
 
   <script>
-    const urlParams = new URLSearchParams(window.location.search);
-    // const email = urlParams.get('email');
-
     const email = localStorage.getItem('email');
 
     if (!email) {
-      // If not logged in, redirect to login page
       window.location.href = '/login.html';
     }
+
+    document.getElementById('logoutButton').addEventListener('click', () => {
+      localStorage.removeItem('email');
+      window.location.href = '/login.html';
+    });
 
     document.getElementById('todoForm').addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -56,15 +65,6 @@
       }
     });
 
-    document.getElementById('logoutButton').addEventListener('click', () => {
-      // Clear any session data (if using localStorage or sessionStorage)
-      localStorage.removeItem('email');  // Or sessionStorage.removeItem('email');
-      
-      // Redirect to the login page
-      window.location.href = '/login.html';
-    });
-
-
     async function loadTodos() {
       const response = await fetch(`/todos?email=${encodeURIComponent(email)}`);
       const todos = await response.json();
@@ -72,10 +72,10 @@
       const todoList = document.getElementById('todoList');
       todoList.innerHTML = '';
 
-      todos.forEach(todo => {
+      todos.forEach(async (todo) => {
         const todoItem = document.createElement('div');
         todoItem.classList.add('todo-item');
-        todoItem.innerText = `${todo.title}: ${todo.description}`;
+        todoItem.innerHTML = `<strong>${todo.title}</strong>: ${todo.description}`;
 
         const updateButton = document.createElement('button');
         updateButton.innerText = 'Update';
@@ -87,8 +87,145 @@
         deleteButton.onclick = () => deleteTodo(todo.id);
         todoItem.appendChild(deleteButton);
 
+        const addSubtodoButton = document.createElement('button');
+        addSubtodoButton.innerText = '+';
+        addSubtodoButton.onclick = () => addSubtodo(todo.id);
+        todoItem.appendChild(addSubtodoButton);
+
+        // Display subtodos
+        const subtodoContainer = document.createElement('div');
+        subtodoContainer.classList.add('subtodo-container');
+        todoItem.appendChild(subtodoContainer);
+
+        const subtodos = await loadSubtodos(todo.id);
+        if (subtodos.length === 0) {
+          subtodoContainer.innerText = "No subtodos. Click + to create.";
+        } else {
+          subtodos.forEach(subtodo => {
+            const subtodoItem = document.createElement('div');
+            subtodoItem.classList.add('subtodo-item');
+            subtodoItem.innerText = `${subtodo.title}: ${subtodo.description}`;
+            subtodoContainer.appendChild(subtodoItem);
+          });
+        }
+
         todoList.appendChild(todoItem);
       });
+    }
+
+    // Load Subtodos for a Specific Todo
+    async function loadSubtodos(todoId) {
+      try {
+        const response = await fetch(`/subtodos?email=${encodeURIComponent(email)}&todoId=${encodeURIComponent(todoId)}`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch subtodos');
+        }
+        const subtodos = await response.json();
+        return subtodos;
+      } catch (error) {
+        console.error('Error loading subtodos:', error);
+        return [];
+      }
+    }
+
+    // Add Subtodo to a Specific Todo
+    async function addSubtodo(todoId) {
+      const title = prompt('Enter subtodo title:');
+      if (!title) return;
+
+      const description = prompt('Enter subtodo description:');
+      if (description === null) return; // Allow empty description
+
+      try {
+        const response = await fetch('/addSubtodo', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, todoId, title, description }),
+        });
+
+        const data = await response.json();
+        if (response.ok && data.success) {
+          alert('Subtodo added successfully');
+          loadTodos();
+        } else {
+          alert(`Failed to add subtodo: ${data.message}`);
+        }
+      } catch (error) {
+        console.error('Error adding subtodo:', error);
+        alert('An error occurred while adding subtodo');
+      }
+    }
+
+    // Update Subtodo
+    async function updateSubtodo(todoId, subtodoId) {
+      const title = prompt('Enter new subtodo title:');
+      if (!title) return;
+
+      const description = prompt('Enter new subtodo description:');
+      if (description === null) return; // Allow empty description
+
+      try {
+        const response = await fetch('/updateSubtodo', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, todoId, subtodoId, updatedData: { title, description } }),
+        });
+
+        const data = await response.json();
+        if (response.ok && data.success) {
+          alert('Subtodo updated successfully');
+          loadTodos();
+        } else {
+          alert(`Failed to update subtodo: ${data.message}`);
+        }
+      } catch (error) {
+        console.error('Error updating subtodo:', error);
+        alert('An error occurred while updating subtodo');
+      }
+    }
+
+    // Delete Subtodo
+    async function deleteSubtodo(todoId, subtodoId) {
+      const confirmDelete = confirm('Are you sure you want to delete this subtodo?');
+      if (!confirmDelete) return;
+
+      try {
+        const response = await fetch('/deleteSubtodo', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, todoId, subtodoId }),
+        });
+
+        const data = await response.json();
+        if (response.ok && data.success) {
+          alert('Subtodo deleted successfully');
+          loadTodos();
+        } else {
+          alert(`Failed to delete subtodo: ${data.message}`);
+        }
+      } catch (error) {
+        console.error('Error deleting subtodo:', error);
+        alert('An error occurred while deleting subtodo');
+      }
+    }
+
+    async function addSubtodo(todoId) {
+      const title = prompt('Enter subtodo title:');
+      const description = prompt('Enter subtodo description:');
+
+      if (title && description) {
+        const response = await fetch('/addSubtodo', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ email, todoId, title, description })
+        });
+
+        if (response.ok) {
+          loadTodos();
+        }
+      }
     }
 
     async function updateTodo(todoId) {

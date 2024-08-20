@@ -11,8 +11,6 @@ function hashPassword(password) {
   return crypto.createHash('sha256').update(password).digest('hex');
 }
 
-
-// Utility Functions
 function serializeTodo(todo) {
   const id = todo.id.padEnd(20, ' ');
   const title = todo.title.padEnd(50, ' ');
@@ -67,7 +65,6 @@ function loginUser(email, password) {
   return false;
 }
 
-// File Operations
 function addTodo(email, todoData) {
   const userDir = path.join(__dirname, 'todo', email.replace(/@/g, '_').replace(/\./g, '_'));
   if (!fs.existsSync(userDir)) {
@@ -168,6 +165,46 @@ function deleteTodo(email, todoId) {
   return false;
 }
 
+// Subtodo Operations
+function addSubtodo(email, todoId, subtodoData) {
+  const userDir = path.join(__dirname, 'todo', email.replace(/@/g, '_').replace(/\./g, '_'));
+  const subtodoDir = path.join(userDir, todoId);
+
+  if (!fs.existsSync(subtodoDir)) {
+    fs.mkdirSync(subtodoDir, { recursive: true });
+  }
+
+  const subtodoFile = path.join(subtodoDir, 'subtodos.bin');
+  const buffer = Buffer.from(serializeTodo(subtodoData), 'utf8');
+  
+  fs.appendFileSync(subtodoFile, buffer);
+}
+
+function readSubtodos(email, todoId) {
+  const userDir = path.join(__dirname, 'todo', email.replace(/@/g, '_').replace(/\./g, '_'));
+  const subtodoDir = path.join(userDir, todoId);
+  const subtodoFile = path.join(subtodoDir, 'subtodos.bin');
+
+  if (!fs.existsSync(subtodoFile)) {
+    return [];
+  }
+
+  const subtodos = [];
+  const fd = fs.openSync(subtodoFile, 'r');
+  const buffer = Buffer.alloc(RECORD_SIZE);
+  let bytesRead = 0;
+  let position = 0;
+
+  while ((bytesRead = fs.readSync(fd, buffer, 0, RECORD_SIZE, position)) > 0) {
+    const subtodo = deserializeTodo(buffer.toString('utf8', 0, bytesRead));
+    subtodos.push(subtodo);
+    position += RECORD_SIZE;
+  }
+  fs.closeSync(fd);
+
+  return subtodos;
+}
+
 // Server Setup
 const server = http.createServer((req, res) => {
   const parsedUrl = url.parse(req.url, true);
@@ -211,7 +248,9 @@ const server = http.createServer((req, res) => {
         }
       });
     });
-  }  // Register User
+  } 
+
+  // Register User
   else if (req.method === 'POST' && pathname === '/register') {
     let body = '';
     req.on('data', chunk => { body += chunk.toString(); });
@@ -223,6 +262,7 @@ const server = http.createServer((req, res) => {
       res.end(JSON.stringify({ success: true }));
     });
   }
+
   // Login User
   else if (req.method === 'POST' && pathname === '/login') {
     let body = '';
@@ -238,20 +278,6 @@ const server = http.createServer((req, res) => {
         res.end(JSON.stringify({ success: false }));
       }
     });
-  }
-
-  // Protect routes with simple session (checking email in URL query)
-  else if (req.method === 'GET' && pathname === '/todos') {
-    const { email } = parsedUrl.query;
-    if (!email) {
-      res.writeHead(401, { 'Content-Type': 'text/plain' });
-      res.end('Unauthorized');
-      return;
-    }
-    const todos = readTodos(email);
-
-    res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify(todos));
   }
 
   // CRUD Operations
@@ -303,6 +329,29 @@ const server = http.createServer((req, res) => {
       res.writeHead(success ? 200 : 404, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ success }));
     });
+  }
+
+  // Add Subtodo
+  else if (req.method === 'POST' && pathname === '/addSubtodo') {
+    let body = '';
+    req.on('data', chunk => { body += chunk.toString(); });
+    req.on('end', () => {
+      const { email, todoId, title, description } = JSON.parse(body);
+      const subtodoData = { id: Date.now().toString(), title, description, status: 'notstarted', created_at: new Date().toISOString(), updated_at: new Date().toISOString() };
+
+      addSubtodo(email, todoId, subtodoData);
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ success: true }));
+    });
+  }
+
+  // Read Subtodos
+  else if (req.method === 'GET' && pathname === '/subtodos') {
+    const { email, todoId } = parsedUrl.query;
+    const subtodos = readSubtodos(email, todoId);
+
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify(subtodos));
   }
 
   // Route not found
