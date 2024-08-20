@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Todo Dashboard</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+    }
+    .todo-item {
+      margin-bottom: 10px;
+    }
+    .todo-item button {
+      margin-left: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Todo Dashboard</h1>
+
+  <form id="todoForm">
+    <input type="text" id="todoTitle" placeholder="Todo Title" required>
+    <textarea id="todoDescription" placeholder="Todo Description"></textarea>
+    <button type="submit">Add Todo</button>
+  </form>
+
+  <h2>Your Todos</h2>
+  <div id="todoList"></div>
+
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const email = urlParams.get('email');
+
+    document.getElementById('todoForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const title = document.getElementById('todoTitle').value;
+      const description = document.getElementById('todoDescription').value;
+
+      const response = await fetch('/addTodo', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email, title, description })
+      });
+
+      if (response.ok) {
+        loadTodos();
+      }
+    });
+
+    async function loadTodos() {
+      const response = await fetch(`/todos?email=${encodeURIComponent(email)}`);
+      const todos = await response.json();
+
+      const todoList = document.getElementById('todoList');
+      todoList.innerHTML = '';
+
+      todos.forEach(todo => {
+        const todoItem = document.createElement('div');
+        todoItem.classList.add('todo-item');
+        todoItem.innerText = `${todo.title}: ${todo.description}`;
+
+        const updateButton = document.createElement('button');
+        updateButton.innerText = 'Update';
+        updateButton.onclick = () => updateTodo(todo.id);
+        todoItem.appendChild(updateButton);
+
+        const deleteButton = document.createElement('button');
+        deleteButton.innerText = 'Delete';
+        deleteButton.onclick = () => deleteTodo(todo.id);
+        todoItem.appendChild(deleteButton);
+
+        todoList.appendChild(todoItem);
+      });
+    }
+
+    async function updateTodo(todoId) {
+      const updatedData = prompt('Enter new title and description (comma separated):').split(',');
+
+      if (updatedData.length === 2) {
+        const response = await fetch('/updateTodo', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ email, todoId, updatedData: { title: updatedData[0], description: updatedData[1] } })
+        });
+
+        if (response.ok) {
+          loadTodos();
+        }
+      }
+    }
+
+    async function deleteTodo(todoId) {
+      const response = await fetch('/deleteTodo', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email, todoId })
+      });
+
+      if (response.ok) {
+        loadTodos();
+      }
+    }
+
+    loadTodos(); // Load todos on page load
+  </script>
+</body>
+</html>
