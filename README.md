@@ -57,7 +57,7 @@ To configure the storage location for todos and subtodos, follow these steps:
 
 ### User Registration and Login
 
-- **Directory:** `<env-_older>>/system`
+- **Directory:** `<env-folder>>/system`
 - **File:** `user.bin`
   - **Format:** `<email>:<hashed_password>\n`
   - **Purpose:** Stores user credentials.
