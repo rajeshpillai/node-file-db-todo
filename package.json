@@ -4,7 +4,8 @@
   "main": "file-operations.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "nodemon server.js"
+    "start": "nodemon server.js",
+    "for_load_test": "TODO_BASE_PATH=./tests/data node server.js"
   },
   "keywords": [],
   "author": "",

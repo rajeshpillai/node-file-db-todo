@@ -2,3 +2,5 @@ node_modules
 todo
 data
 .env
+
+tests/data 

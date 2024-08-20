@@ -50,14 +50,14 @@ To configure the storage location for todos and subtodos, follow these steps:
    - Inside the `.env` file, specify the base directory where the todos and subtodos will be stored:
 
    ```plaintext
-   TODO_BASE_PATH=./todo
+   TODO_BASE_PATH=./data
 
 
 ## Storage Structure
 
 ### User Registration and Login
 
-- **Directory:** `todo/system`
+- **Directory:** `<env-_older>>/system`
 - **File:** `user.bin`
   - **Format:** `<email>:<hashed_password>\n`
   - **Purpose:** Stores user credentials.
@@ -129,6 +129,9 @@ To configure the storage location for todos and subtodos, follow these steps:
 3. **Navigate to the Project Directory:** `cd <project-directory>`
 4. **Start the Server:** `node server.js`
 5. **Access the Application:** Open a browser and navigate to `http://localhost:3000/`.
+
+## Load test
+1.  Run the run-load-test.sh script from the root folder.  The test data will be created in the tests/data folder.
 
 ## Future Enhancements
 
