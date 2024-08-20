@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const url = require('url');
 const crypto = require('crypto');
+const lockfile = require("proper-lockfile");
 
 require('dotenv').config(); // Load env from .env file
 
@@ -114,39 +115,57 @@ function readTodos(email) {
   return todos;
 }
 
-function updateTodo(email, todoId, updatedData) {
-  // const userDir = path.join(__dirname, 'todo', email.replace(/@/g, '_').replace(/\./g, '_'));
-  const userDir = getUserDir(email);
+async function updateTodo(email, todoId, updatedData) {
+  const userDir = path.join(TODO_BASE_PATH, email.replace(/@/g, '_').replace(/\./g, '_'));
   const todoFile = path.join(userDir, 'todo.bin');
 
   if (!fs.existsSync(todoFile)) {
+    console.log(`No todo file found for user: ${email}`);
     return false;
   }
 
-  const fd = fs.openSync(todoFile, 'r+');
-  const buffer = Buffer.alloc(RECORD_SIZE);
-  let bytesRead = 0;
-  let position = 0;
+  let release;
+  try {
+    // Acquire an exclusive lock on the file
+    release = await lockfile.lock(todoFile);
 
-  while ((bytesRead = fs.readSync(fd, buffer, 0, RECORD_SIZE, position)) > 0) {
-    const todo = deserializeTodo(buffer.toString('utf8', 0, bytesRead));
-    if (todo.id === todoId) {
-      const updatedTodo = {
-        ...todo,
-        ...updatedData,
-        updated_at: new Date().toISOString(),
-      };
-      const updatedRecord = Buffer.from(serializeTodo(updatedTodo), 'utf8');
-      fs.writeSync(fd, updatedRecord, 0, RECORD_SIZE, position);
-      fs.closeSync(fd);
-      return true;
+    const fd = fs.openSync(todoFile, 'r+');
+    const buffer = Buffer.alloc(RECORD_SIZE);
+    let bytesRead = 0;
+    let position = 0;
+
+    // Search for the todo by ID and update it
+    while ((bytesRead = fs.readSync(fd, buffer, 0, RECORD_SIZE, position)) > 0) {
+      const todo = deserializeTodo(buffer.toString('utf8', 0, bytesRead));
+      if (todo.id === todoId) {
+        const updatedTodo = {
+          ...todo,
+          ...updatedData,
+          updated_at: new Date().toISOString(), // Update the last modified timestamp
+        };
+        const updatedRecord = Buffer.from(serializeTodo(updatedTodo), 'utf8');
+
+        // Write the updated record back to the file at the correct position
+        fs.writeSync(fd, updatedRecord, 0, RECORD_SIZE, position);
+        console.log(`Todo with ID ${todoId} updated successfully.`);
+        break;
+      }
+      position += RECORD_SIZE;
     }
-    position += RECORD_SIZE;
-  }
 
-  fs.closeSync(fd);
-  return false;
+    fs.closeSync(fd);
+    return true;
+  } catch (err) {
+    console.error(`Error during update: ${err.message}`);
+    return false;
+  } finally {
+    // Ensure that the lock is released
+    if (release) {
+      await release();
+    }
+  }
 }
+
 
 function deleteTodo(email, todoId) {
   // const userDir = path.join(__dirname, 'todo', email.replace(/@/g, '_').replace(/\./g, '_'));
