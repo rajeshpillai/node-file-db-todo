@@ -16,6 +16,7 @@
 </head>
 <body>
   <h1>Todo Dashboard</h1>
+  <button id="logoutButton">Logout</button>
 
   <form id="todoForm">
     <input type="text" id="todoTitle" placeholder="Todo Title" required>
@@ -28,7 +29,14 @@
 
   <script>
     const urlParams = new URLSearchParams(window.location.search);
-    const email = urlParams.get('email');
+    // const email = urlParams.get('email');
+
+    const email = localStorage.getItem('email');
+
+    if (!email) {
+      // If not logged in, redirect to login page
+      window.location.href = '/login.html';
+    }
 
     document.getElementById('todoForm').addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -47,6 +55,15 @@
         loadTodos();
       }
     });
+
+    document.getElementById('logoutButton').addEventListener('click', () => {
+      // Clear any session data (if using localStorage or sessionStorage)
+      localStorage.removeItem('email');  // Or sessionStorage.removeItem('email');
+      
+      // Redirect to the login page
+      window.location.href = '/login.html';
+    });
+
 
     async function loadTodos() {
       const response = await fetch(`/todos?email=${encodeURIComponent(email)}`);
