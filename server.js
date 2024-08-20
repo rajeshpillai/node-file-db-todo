@@ -4,12 +4,21 @@ const path = require('path');
 const url = require('url');
 const crypto = require('crypto');
 
+require('dotenv').config(); // Load env from .env file
+
 const RECORD_SIZE = 230; // Define fixed record size for todos
+const TODO_BASE_PATH = process.env.TODO_BASE_PATH || path.join(__dirname, 'data');
+
 
 // Utility Functions
 function hashPassword(password) {
   return crypto.createHash('sha256').update(password).digest('hex');
 }
+
+function getUserDir(email) {
+  return path.join(TODO_BASE_PATH, email.replace(/@/g, '_').replace(/\./g, '_'));
+}
+
 
 function serializeTodo(todo) {
   const id = todo.id.padEnd(20, ' ');
@@ -34,7 +43,7 @@ function deserializeTodo(record) {
 }
 
 function registerUser(email, password) {
-  const systemDir = path.join(__dirname, 'todo', 'system');
+  const systemDir = path.join(TODO_BASE_PATH, 'system');
   if (!fs.existsSync(systemDir)) {
     fs.mkdirSync(systemDir, { recursive: true });
   }
@@ -46,7 +55,7 @@ function registerUser(email, password) {
 }
 
 function loginUser(email, password) {
-  const systemDir = path.join(__dirname, 'todo', 'system');
+  const systemDir = path.join(TODO_BASE_PATH, 'system');
   const userFile = path.join(systemDir, 'user.bin');
 
   if (!fs.existsSync(userFile)) {
@@ -66,7 +75,8 @@ function loginUser(email, password) {
 }
 
 function addTodo(email, todoData) {
-  const userDir = path.join(__dirname, 'todo', email.replace(/@/g, '_').replace(/\./g, '_'));
+  //const userDir = path.join(__dirname, 'todo', email.replace(/@/g, '_').replace(/\./g, '_'));
+  const userDir = getUserDir(email);
   if (!fs.existsSync(userDir)) {
     fs.mkdirSync(userDir, { recursive: true });
   }
@@ -78,7 +88,8 @@ function addTodo(email, todoData) {
 }
 
 function readTodos(email) {
-  const userDir = path.join(__dirname, 'todo', email.replace(/@/g, '_').replace(/\./g, '_'));
+  // const userDir = path.join(__dirname, 'todo', email.replace(/@/g, '_').replace(/\./g, '_'));
+  const userDir = getUserDir(email);
   const todoFile = path.join(userDir, 'todo.bin');
 
   if (!fs.existsSync(todoFile)) {
@@ -104,7 +115,8 @@ function readTodos(email) {
 }
 
 function updateTodo(email, todoId, updatedData) {
-  const userDir = path.join(__dirname, 'todo', email.replace(/@/g, '_').replace(/\./g, '_'));
+  // const userDir = path.join(__dirname, 'todo', email.replace(/@/g, '_').replace(/\./g, '_'));
+  const userDir = getUserDir(email);
   const todoFile = path.join(userDir, 'todo.bin');
 
   if (!fs.existsSync(todoFile)) {
@@ -137,7 +149,8 @@ function updateTodo(email, todoId, updatedData) {
 }
 
 function deleteTodo(email, todoId) {
-  const userDir = path.join(__dirname, 'todo', email.replace(/@/g, '_').replace(/\./g, '_'));
+  // const userDir = path.join(__dirname, 'todo', email.replace(/@/g, '_').replace(/\./g, '_'));
+  const userDir = getUserDir(email);
   const todoFile = path.join(userDir, 'todo.bin');
 
   if (!fs.existsSync(todoFile)) {
@@ -167,7 +180,8 @@ function deleteTodo(email, todoId) {
 
 // Subtodo Operations
 function addSubtodo(email, todoId, subtodoData) {
-  const userDir = path.join(__dirname, 'todo', email.replace(/@/g, '_').replace(/\./g, '_'));
+  // const userDir = path.join(__dirname, 'todo', email.replace(/@/g, '_').replace(/\./g, '_'));
+  const userDir = getUserDir(email);
   const subtodoDir = path.join(userDir, todoId);
 
   if (!fs.existsSync(subtodoDir)) {
@@ -181,7 +195,8 @@ function addSubtodo(email, todoId, subtodoData) {
 }
 
 function deleteSubtodo(email, todoId, subtodoId) {
-  const userDir = path.join(__dirname, 'todo', email.replace(/@/g, '_').replace(/\./g, '_'));
+  // const userDir = path.join(__dirname, 'todo', email.replace(/@/g, '_').replace(/\./g, '_'));
+  const userDir = getUserDir(email);
   const subtodoDir = path.join(userDir, todoId);
   const subtodoFile = path.join(subtodoDir, 'subtodos.bin');
 
@@ -212,7 +227,8 @@ function deleteSubtodo(email, todoId, subtodoId) {
 
 
 function readSubtodos(email, todoId) {
-  const userDir = path.join(__dirname, 'todo', email.replace(/@/g, '_').replace(/\./g, '_'));
+  // const userDir = path.join(__dirname, 'todo', email.replace(/@/g, '_').replace(/\./g, '_'));
+  const userDir = getUserDir(email);
   const subtodoDir = path.join(userDir, todoId);
   const subtodoFile = path.join(subtodoDir, 'subtodos.bin');
 

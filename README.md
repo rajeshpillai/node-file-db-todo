@@ -38,6 +38,20 @@ The application is structured as follows:
 - **Frontend:**
   - The frontend is built with vanilla HTML, CSS, and JavaScript.
   - The UI is dynamic, allowing users to interact with their todos and subtodos in real-time.
+  
+### Environment Configuration with `.env`
+
+To configure the storage location for todos and subtodos, follow these steps:
+
+1. **Create a `.env` File:**
+   - In the root directory of the project, create a file named `.env`.
+
+2. **Set the `TODO_BASE_PATH` Variable:**
+   - Inside the `.env` file, specify the base directory where the todos and subtodos will be stored:
+
+   ```plaintext
+   TODO_BASE_PATH=./todo
+
 
 ## Storage Structure
 
@@ -50,7 +64,7 @@ The application is structured as follows:
 
 ### Todo Storage
 
-- **Directory Structure:** `todo/<email>`
+- **Directory Structure:** `<env_folder>/<email>`
   - **File:** `todo.bin`
     - **Format:** Fixed-size records for each todo.
     - **Fields:**
@@ -63,7 +77,7 @@ The application is structured as follows:
 
 ### Subtodo Storage
 
-- **Directory Structure:** `todo/<email>/<todo_id>`
+- **Directory Structure:** `<env_folder>/<email>/<todo_id>`
   - **File:** `subtodos.bin`
     - **Format:** Fixed-size records for each subtodo.
     - **Fields:**
